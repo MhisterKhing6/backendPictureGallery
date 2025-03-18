@@ -1,0 +1,38 @@
+name: Push Docker image to Amazon ECR Public
+
+on:
+  push:
+    branches:
+      - master  # Trigger this action only on pushes to the master branch
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Step 1: Checkout repository
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      # Step 2: Configure AWS credentials and assume IAM role
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1  
+      - name: Login to Amazon ECR Public
+        id: login-ecr-public
+        uses: aws-actions/amazon-ecr-login@v2
+        with:
+          registry-type: public   
+
+      # Step 4: Build, tag, and push Docker image to Amazon ECR Publics
+      - name: Build, tag, and push Docker image to Amazon ECR Public
+        env:
+          REGISTRY: ${{ steps.login-ecr-public.outputs.registry }} 
+          REPOSITORY: my-picture-gallery-repository 
+          IMAGE_TAG: final-picture-gallery  # Use the commit SHA as the image tag
+        run: |
+          docker build -t $REGISTRY/$REPOSITORY:$IMAGE_TAG .
+          docker push $REGISTRY/$REPOSITORY:$IMAGE_TAG
