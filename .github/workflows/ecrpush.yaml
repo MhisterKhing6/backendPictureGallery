@@ -30,7 +30,7 @@ jobs:
       # Step 4: Build, tag, and push Docker image to Amazon ECR Publics
       - name: Build, tag, and push Docker image to Amazon ECR Public
         env:
-          REGISTRY: ${{ steps.login-ecr-public.outputs.registry }} 
+          REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           REPOSITORY: my-picture-gallery-repository 
           IMAGE_TAG: final-picture-gallery  # Use the commit SHA as the image tag
         run: |
