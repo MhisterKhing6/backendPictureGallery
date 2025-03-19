@@ -74,6 +74,6 @@ jobs:
       - name: Update ECS service
         run: |
           aws ecs update-service \
-            --cluster manualdeploy \
+            --cluster manualdepoloy \
             --service faragatcluster \
             --task-definition $TASK_DEF_ARN
