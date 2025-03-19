@@ -1,4 +1,4 @@
-name: Push Docker image to Amazon ECR and Deploy to ECS
+name: Push Docker Image to Amazon ECR and Deploy to ECS
 
 on:
   push:
@@ -28,7 +28,7 @@ jobs:
         uses: aws-actions/amazon-ecr-login@v2
 
       # Step 4: Build, tag, and push Docker image to Amazon ECR
-      - name: Build, tag, and push docker image to Amazon ECR
+      - name: Build, tag, and push Docker image to Amazon ECR
         env:
           REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           REPOSITORY: my-picture-gallery-repository
@@ -37,34 +37,40 @@ jobs:
           docker build -t $REGISTRY/$REPOSITORY:$IMAGE_TAG .
           docker push $REGISTRY/$REPOSITORY:$IMAGE_TAG
 
-      # Step 5: Update ECS task definition
-      - name: Update ECS task definition
-        id: update-task-def
+      # Step 5: Register a new ECS task definition
+      - name: Register ECS task definition
+        id: register-task-def
         run: |
-          # Create a new revision of the ECS task definition
+          echo "Registering new ECS task definition..."
+
           NEW_TASK_DEF=$(aws ecs register-task-definition \
             --family picturegallery \
+            --network-mode "awsvpc" \
+            --requires-compatibilities "FARGATE" \
+            --execution-role-arn "arn:aws:iam::YOUR_ACCOUNT_ID:role/YOUR_EXECUTION_ROLE" \
+            --task-role-arn "arn:aws:iam::YOUR_ACCOUNT_ID:role/YOUR_TASK_ROLE" \
             --container-definitions "$(jq -n \
               --arg image "$REGISTRY/$REPOSITORY:$IMAGE_TAG" \
               '[{
-                "name": "picture-gallery",  # Container name (updated)
+                "name": "picture-gallery",
                 "image": $image,
                 "essential": true,
                 "memory": 512,
                 "cpu": 256
               }]')")
 
-          # Extract the task definition revision ARN
-          echo "Task definition revision ARN: $(echo $NEW_TASK_DEF | jq -r '.taskDefinition.taskDefinitionArn')"
+          echo "Task Definition Response: $NEW_TASK_DEF"
 
-          # Output the task definition ARN for use in later steps
-          echo "::set-output name=task_def_arn::$(echo $NEW_TASK_DEF | jq -r '.taskDefinition.taskDefinitionArn')"
+          # Extract the task definition ARN
+          TASK_DEF_ARN=$(echo "$NEW_TASK_DEF" | jq -r '.taskDefinition.taskDefinitionArn')
+
+          echo "Task definition revision ARN: $TASK_DEF_ARN"
+          echo "TASK_DEF_ARN=$TASK_DEF_ARN" >> $GITHUB_ENV
 
       # Step 6: Update ECS service
       - name: Update ECS service
         run: |
-          # Update ECS service to use the new task definition revision
           aws ecs update-service \
-            --cluster manualdepoloy \  # Cluster name (updated)
-            --service faragatcluster \  # Service name (updated)
-            --task-definition ${{ steps.update-task-def.outputs.task_def_arn }}
+            --cluster manualdeploy \
+            --service faragatcluster \
+            --task-definition $TASK_DEF_ARN
