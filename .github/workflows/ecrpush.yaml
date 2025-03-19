@@ -45,21 +45,22 @@ jobs:
 
           NEW_TASK_DEF=$(aws ecs register-task-definition \
             --family picturegallery \
-            --network-mode "awsvpc" \
-            --requires-compatibilities "FARGATE" \
-            --execution-role-arn "arn:aws:iam::YOUR_ACCOUNT_ID:role/YOUR_EXECUTION_ROLE" \
-            --task-role-arn "arn:aws:iam::YOUR_ACCOUNT_ID:role/YOUR_TASK_ROLE" \
-            --cpu "256" \  # ✅ Define at task level
-            --memory "512" \  # ✅ Define at task level
-            --container-definitions "$(jq -n \
-              --arg image "$REGISTRY/$REPOSITORY:$IMAGE_TAG" \
-              '[{
+            --network-mode awsvpc \
+            --requires-compatibilities FARGATE \
+            --execution-role-arn arn:aws:iam::YOUR_ACCOUNT_ID:role/YOUR_EXECUTION_ROLE \
+            --task-role-arn arn:aws:iam::YOUR_ACCOUNT_ID:role/YOUR_TASK_ROLE \
+            --cpu 256 \
+            --memory 512 \
+            --container-definitions "$(jq -n --arg image "$REGISTRY/$REPOSITORY:$IMAGE_TAG" '[
+              {
                 "name": "picture-gallery",
                 "image": $image,
                 "essential": true,
                 "memory": 512,
                 "cpu": 256
-              }]')")
+              }
+            ]')"
+          )
 
           echo "Task Definition Response: $NEW_TASK_DEF"
 
