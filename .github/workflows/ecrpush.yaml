@@ -83,5 +83,5 @@ jobs:
           aws ecs update-service \
             --cluster manualdepoloy \
             --service faragatcluster \
-            --task-definition $TASK_DEF_ARN
+            --task-definition $TASK_DEF_ARN \
             --region eu-west-1
