@@ -77,3 +77,4 @@ jobs:
             --cluster manualdepoloy \
             --service faragatcluster \
             --task-definition $TASK_DEF_ARN
+            --region eu-west-1
