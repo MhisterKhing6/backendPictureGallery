@@ -47,8 +47,8 @@ jobs:
             --family picturegallery \
             --network-mode "awsvpc" \
             --requires-compatibilities "FARGATE" \
-            --execution-role-arn "arn:aws:iam::YOUR_ACCOUNT_ID:role/YOUR_EXECUTION_ROLE" \
-            --task-role-arn "arn:aws:iam::YOUR_ACCOUNT_ID:role/YOUR_TASK_ROLE" \
+            --execution-role-arn "arn:aws:iam::050752639856:role/ecsTaskExecutionRole" \
+            --task-role-arn "arn:aws:iam::050752639856:role/eviroment-setup-final-lab-FargateTaskRole-fyr87ELYVRxh" \
             --container-definitions "$(jq -n \
               --arg image "$REGISTRY/$REPOSITORY:$IMAGE_TAG" \
               '[{
