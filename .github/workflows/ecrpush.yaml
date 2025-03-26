@@ -8,7 +8,7 @@ on:
 
 env:
   APP_ENVIRONMENT: weekfiveproject
-  AWS_REGION: us-east-1
+  AWS_REGION: eu-west-1
   ECS_CLUSTER: weekfiveproject-Cluster
   ECS_SERVICE: weekfiveproject-service
   ECS_TASK_FAMILY: weekfiveproject-task
@@ -39,7 +39,7 @@ jobs:
       with:
         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        aws-region: ${{ env.AWS_REGION }}
+        aws-region: us-east-1
         
     - name: Login to Amazon ECR
       id: login-ecr
