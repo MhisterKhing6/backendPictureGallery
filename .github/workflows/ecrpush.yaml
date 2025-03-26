@@ -1,12 +1,23 @@
-name: Push Docker image to Amazon ECR Public
+name: Deploy to ECS with Blue/Green Deployment
 
 on:
   push:
     branches:
       - master  # Trigger this action only on pushes to the master branch
 
+env:
+  AWS_REGION: eu-west-1
+  ECR_REPOSITORY: week5/lab
+  REGISTRY_ALIAS: p8o0y7b7
+  IMAGE_TAG: image_uploader_backend
+  ECS_CLUSTER: weekfiveproject-Cluster
+  ECS_SERVICE: weekfiveproject-service
+  TASK_DEFINITION_NAME: weekfiveproject-task
+  CODEDEPLOY_APP_NAME: week5codeploy
+  CODEDEPLOY_DEPLOYMENT_GROUP: week5codedeploymentgroup
+
 jobs:
-  build:
+  build-and-deploy:
     runs-on: ubuntu-latest
 
     steps:
@@ -14,26 +25,45 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v3
 
-      # Step 2: Configure AWS credentials and assume IAM role
+      # Step 2: Configure AWS credentials
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: us-east-1  
+          aws-region: ${{ env.AWS_REGION }}
+
+      # Step 3: Login to Amazon ECR Public
       - name: Login to Amazon ECR Public
         id: login-ecr-public
         uses: aws-actions/amazon-ecr-login@v2
         with:
           registry-type: public   
 
-      # Step 4: Build, tag, and push Docker image to Amazon ECR Publics
+      # Step 4: Build, tag, and push Docker image to Amazon ECR Public
       - name: Build, tag, and push Docker image to Amazon ECR Public
         env:
           REGISTRY: ${{ steps.login-ecr-public.outputs.registry }} 
-          REPOSITORY: week5/lab
-          REGISTRY_ALIAS: p8o0y7b7
-          IMAGE_TAG: image_uploader_backend  # Use the commit SHA as the image tag
         run: |
-          docker build -t $REGISTRY/$REGISTRY_ALIAS/$REPOSITORY:$IMAGE_TAG .
-          docker push $REGISTRY/$REGISTRY_ALIAS/$REPOSITORY:$IMAGE_TAG
+          docker build -t $REGISTRY/${{ env.REGISTRY_ALIAS }}/${{ env.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }} .
+          docker push $REGISTRY/${{ env.REGISTRY_ALIAS }}/${{ env.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }}
+
+      # Step 5: Update ECS Task Definition
+      - name: Update ECS Task Definition
+        id: task-def
+        run: |
+          TASK_DEFINITION=$(aws ecs describe-task-definition --task-definition ${{ env.TASK_DEFINITION_NAME }})
+          echo "$TASK_DEFINITION" | jq '.taskDefinition | {containerDefinitions: .containerDefinitions, family: .family}' > new-task-def.json
+          jq --arg IMAGE "${{ steps.login-ecr-public.outputs.registry }}/${{ env.REGISTRY_ALIAS }}/${{ env.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }}" '.containerDefinitions[0].image=$IMAGE' new-task-def.json > new-task-def-updated.json
+          TASK_REVISION=$(aws ecs register-task-definition --cli-input-json file://new-task-def-updated.json | jq -r '.taskDefinition.revision')
+          echo "TASK_REVISION=$TASK_REVISION" >> $GITHUB_ENV
+
+      # Step 6: Deploy to ECS via AWS CodeDeploy (Blue/Green)
+      - name: Trigger Blue/Green Deployment
+        run: |
+          aws deploy create-deployment \
+            --application-name ${{ env.CODEDEPLOY_APP_NAME }} \
+            --deployment-group-name ${{ env.CODEDEPLOY_DEPLOYMENT_GROUP }} \
+            --deployment-config-name CodeDeployDefault.ECSAllAtOnce \
+            --revision "{\"revisionType\":\"AppSpecContent\",\"appSpecContent\":{\"content\":\"$(cat appspec.yaml | base64 -w 0)\"}}" \
+            --region ${{ env.AWS_REGION }}
