@@ -2,9 +2,9 @@ name: ECS Blue-Green CI/CD
 
 on:
   push:
-    branches: [main]
+    branches: [master]
   pull_request:
-    branches: [main]
+    branches: [master]
 
 env:
   APP_ENVIRONMENT: weekfiveproject
