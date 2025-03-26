@@ -33,7 +33,7 @@ jobs:
           REGISTRY: ${{ steps.login-ecr-public.outputs.registry }} 
           REPOSITORY: week5/lab
           REGISTRY_ALIAS: p8o0y7b7
-          IMAGE_TAG: kingsleybotchway_containerise  # Use the commit SHA as the image tag
+          IMAGE_TAG: image_uploader_backend  # Use the commit SHA as the image tag
         run: |
           docker build -t $REGISTRY/$REGISTRY_ALIAS/$REPOSITORY:$IMAGE_TAG .
           docker push $REGISTRY/$REGISTRY_ALIAS/$REPOSITORY:$IMAGE_TAG
