@@ -32,56 +32,7 @@ jobs:
         env:
           REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           REPOSITORY: my-picture-gallery-repository
-          IMAGE_TAG: picturegallery
+          IMAGE_TAG: picturegallerybackend
         run: |
           docker build -t $REGISTRY/$REPOSITORY:$IMAGE_TAG .
           docker push $REGISTRY/$REPOSITORY:$IMAGE_TAG
-
-      # Step 5: Register a new ECS task definition with task-level CPU and memory
-      - name: Register ECS task definition
-        id: register-task-def
-        run: |
-          echo "Registering new ECS task definition..."
-
-          NEW_TASK_DEF=$(aws ecs register-task-definition \
-            --family myfargatetask \
-            --network-mode awsvpc \
-            --requires-compatibilities FARGATE \
-            --execution-role-arn arn:aws:iam::050752639856:role/ecsTaskExecutionRole \
-            --task-role-arn arn:aws:iam::050752639856:role/eviroment-setup-final-lab-FargateTaskRole-fyr87ELYVRxh \
-            --cpu 256 \
-            --memory 512 \
-            --container-definitions "$(jq -n --arg image "$REGISTRY/$REPOSITORY:$IMAGE_TAG" '[
-              {
-                "name": "picture-gallery",
-                "image": $image,
-                "essential": true,
-                "memory": 512,
-                "cpu": 256,
-                "portMappings": [
-            {
-              "containerPort": 8080,
-              "hostPort": 8080,
-              "protocol": "tcp"
-            }
-          ]
-              }
-            ]')"
-          )
-
-          echo "Task Definition Response: $NEW_TASK_DEF"
-
-          # Extract the task definition ARN
-          TASK_DEF_ARN=$(echo "$NEW_TASK_DEF" | jq -r '.taskDefinition.taskDefinitionArn')
-
-          echo "Task definition revision ARN: $TASK_DEF_ARN"
-          echo "TASK_DEF_ARN=$TASK_DEF_ARN" >> $GITHUB_ENV
-
-      # Step 6: Update ECS service
-      - name: Update ECS service
-        run: |
-          aws ecs update-service \
-            --cluster picturegallery_backend \
-            --service picture-gallery-backend \
-            --task-definition $TASK_DEF_ARN \
-            --region eu-west-1
